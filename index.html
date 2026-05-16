@@ -3,119 +3,141 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cross-Venue Arb Scope Desk</title>
+<title>Scope Desk — Cross-Venue Arb Scanner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@400;500&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#0a0e14; --panel:#11161f; --panel-2:#161d28; --line:#232c3a;
-    --ink:#e8edf4; --ink-dim:#8794a6; --ink-faint:#5b6676;
-    --gain:#3ddc91; --warn:#f5a623; --danger:#ff5c5c; --accent:#5b8def;
-    --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
-    --disp:'Space Mono',var(--mono);
+    --bg:#f8f9fa; --surface:#ffffff; --line:#dadce0; --line-soft:#e8eaed;
+    --ink:#202124; --ink-2:#5f6368; --ink-3:#80868b;
+    --blue:#1a73e8; --blue-bg:#e8f0fe; --blue-ink:#1967d2;
+    --green:#188038; --green-bg:#e6f4ea;
+    --amber:#b06000; --amber-bg:#fef7e0;
+    --red:#d93025; --red-bg:#fce8e6;
+    --sans:'Google Sans','Roboto',Arial,sans-serif;
+    --body:'Roboto',Arial,sans-serif;
+    --mono:'Roboto Mono',monospace;
+    --shadow:0 1px 2px rgba(60,64,67,.1),0 1px 3px 1px rgba(60,64,67,.06);
+    --shadow-2:0 1px 3px rgba(60,64,67,.12),0 4px 8px 3px rgba(60,64,67,.08);
   }
-  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Mono:wght@700&display=swap');
   *{box-sizing:border-box;margin:0;padding:0}
-  body{background:var(--bg);color:var(--ink);font-family:var(--mono);font-size:13px;line-height:1.5;
-    background-image:radial-gradient(circle at 15% 0%,rgba(91,141,239,.06),transparent 40%),radial-gradient(circle at 85% 100%,rgba(61,220,145,.04),transparent 40%);min-height:100vh}
-  .wrap{max-width:1180px;margin:0 auto;padding:28px 22px 80px}
-  header{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:6px;flex-wrap:wrap;gap:16px}
-  h1{font-family:var(--disp);font-size:21px;letter-spacing:-.5px;font-weight:700}
-  h1 .tag{color:var(--accent)}
-  .sub{color:var(--ink-faint);font-size:11px;margin-top:5px;max-width:560px}
-  .ctrl{display:flex;gap:10px;align-items:center}
-  button{font-family:var(--mono);font-size:12px;font-weight:600;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);padding:9px 16px;border-radius:6px;cursor:pointer;transition:.15s}
-  button:hover{border-color:var(--accent);color:var(--accent)}
-  button:disabled{opacity:.4;cursor:wait}
-  button.primary{background:var(--accent);border-color:var(--accent);color:#06101f}
-  button.primary:hover{filter:brightness(1.12);color:#06101f}
-  .meta{display:flex;gap:26px;margin:20px 0 8px;flex-wrap:wrap;color:var(--ink-dim);font-size:11px}
-  .meta b{color:var(--ink);font-weight:600}
-  .cfg{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin:14px 0 22px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px}
-  .cfg label{display:block;color:var(--ink-faint);font-size:10px;text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px}
-  .cfg input{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--ink);font-family:var(--mono);font-size:13px;padding:7px 9px;border-radius:5px}
-  .cfg input:focus{outline:none;border-color:var(--accent)}
-  .banner{border:1px solid var(--line);border-left:3px solid var(--warn);background:var(--panel);padding:12px 15px;border-radius:6px;font-size:11px;color:var(--ink-dim);margin-bottom:22px}
-  .banner b{color:var(--warn)}
-  .sec-title{font-family:var(--disp);font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink-faint);margin:30px 0 12px;display:flex;align-items:center;gap:10px}
-  .sec-title:after{content:"";flex:1;height:1px;background:var(--line)}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:9px;margin-bottom:14px;overflow:hidden}
-  .card.confirmed{border-color:rgba(61,220,145,.4)}
-  .card-top{display:flex;justify-content:space-between;gap:18px;padding:15px 18px;cursor:pointer;align-items:flex-start}
-  .card-top:hover{background:var(--panel-2)}
-  .q{font-size:14px;font-weight:500;margin-bottom:7px;line-height:1.35}
-  .venues{display:flex;gap:22px;flex-wrap:wrap;font-size:11px;color:var(--ink-dim)}
-  .venues .vn{color:var(--ink-faint);text-transform:uppercase;letter-spacing:.5px;font-size:9px}
-  .venues .px{color:var(--ink);font-size:14px;font-weight:600;font-family:var(--disp)}
-  .edge-box{text-align:right;flex-shrink:0;min-width:118px}
-  .edge-n{font-family:var(--disp);font-size:23px;font-weight:700;line-height:1}
-  .edge-n.pos{color:var(--gain)} .edge-n.neg{color:var(--ink-faint)}
-  .edge-l{font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--ink-faint);margin-top:5px}
-  .pill{display:inline-block;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;padding:3px 8px;border-radius:99px;margin-top:8px}
-  .pill.cand{background:rgba(245,166,35,.13);color:var(--warn);border:1px solid rgba(245,166,35,.3)}
-  .pill.ok{background:rgba(61,220,145,.13);color:var(--gain);border:1px solid rgba(61,220,145,.3)}
-  .body{border-top:1px solid var(--line);padding:0;display:none}
+  body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px 80px}
+  header{background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+  .hd{max-width:1080px;margin:0 auto;padding:16px 24px;display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{width:34px;height:34px;border-radius:8px;background:var(--blue);display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--sans);font-weight:700;font-size:17px}
+  h1{font-family:var(--sans);font-size:20px;font-weight:500;color:var(--ink)}
+  .sub{font-size:12px;color:var(--ink-3);margin-top:1px}
+  button{font-family:var(--sans);font-size:14px;font-weight:500;border:1px solid var(--line);background:var(--surface);color:var(--blue);padding:9px 22px;border-radius:20px;cursor:pointer;transition:.15s}
+  button:hover{background:var(--blue-bg);box-shadow:var(--shadow)}
+  button:disabled{opacity:.5;cursor:wait}
+  button.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+  button.primary:hover{background:#1b66c9;box-shadow:var(--shadow-2)}
+  button.text{border:none;background:none;padding:8px 14px}
+  button.text:hover{background:var(--blue-bg)}
+  .intro{margin:26px 0 4px;font-family:var(--sans);font-size:15px;color:var(--ink-2);max-width:680px;line-height:1.6}
+  .cfg{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:20px 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:18px;box-shadow:var(--shadow)}
+  .cfg label{display:block;color:var(--ink-3);font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+  .cfg input{width:100%;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-family:var(--body);font-size:14px;padding:9px 11px;border-radius:6px;transition:.15s}
+  .cfg input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 2px var(--blue-bg)}
+  .note{background:var(--blue-bg);border-radius:12px;padding:14px 18px;font-size:13px;color:var(--blue-ink);margin-bottom:22px;line-height:1.6}
+  .note b{font-weight:700}
+  .note code{background:rgba(26,115,232,.12);padding:1px 6px;border-radius:4px;font-family:var(--mono);font-size:12px}
+  .meta{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}
+  .chip{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 14px;font-size:12px;color:var(--ink-2)}
+  .chip b{color:var(--ink);font-weight:500;font-family:var(--mono)}
+  .sec{font-family:var(--sans);font-size:13px;font-weight:500;color:var(--ink-2);margin:34px 0 14px;display:flex;align-items:center;gap:9px}
+  .sec .dot{width:8px;height:8px;border-radius:50%}
+  .sec .dot.g{background:var(--green)} .sec .dot.a{background:var(--amber)}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:12px;margin-bottom:14px;overflow:hidden;box-shadow:var(--shadow);transition:.15s}
+  .card:hover{box-shadow:var(--shadow-2)}
+  .card.confirmed{border-color:#a8dab5}
+  .top{display:flex;justify-content:space-between;gap:20px;padding:18px 20px;cursor:pointer;align-items:flex-start}
+  .top:hover{background:#fbfbfb}
+  .q{font-family:var(--sans);font-size:16px;font-weight:500;color:var(--ink);margin-bottom:12px;line-height:1.4}
+  .vrow{display:flex;gap:28px;flex-wrap:wrap}
+  .v .vl{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink-3);margin-bottom:3px}
+  .v .vp{font-family:var(--mono);font-size:17px;font-weight:500;color:var(--ink)}
+  .badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:500;padding:5px 11px;border-radius:8px;margin-top:14px}
+  .badge.cand{background:var(--amber-bg);color:var(--amber)}
+  .badge.ok{background:var(--green-bg);color:var(--green)}
+  .edge{text-align:right;flex-shrink:0;min-width:120px}
+  .edge .n{font-family:var(--sans);font-size:30px;font-weight:700;line-height:1}
+  .edge .n.pos{color:var(--green)} .edge .n.neg{color:var(--ink-3)}
+  .edge .l{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink-3);margin-top:6px}
+  .body{display:none;border-top:1px solid var(--line-soft)}
   .card.open .body{display:block}
-  .reso-grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
-  .reso{padding:15px 18px}
-  .reso:first-child{border-right:1px solid var(--line)}
-  .reso h4{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:8px}
-  .reso .src{font-size:10px;color:var(--ink-faint);margin-bottom:9px}
-  .reso p{font-size:11.5px;color:var(--ink-dim);white-space:pre-wrap;max-height:230px;overflow:auto}
-  .scope-warn{background:rgba(255,92,92,.08);border-top:1px solid rgba(255,92,92,.25);padding:11px 18px;font-size:11px;color:#ffb0b0}
-  .scope-warn b{color:var(--danger)}
-  .act{display:flex;gap:10px;padding:14px 18px;border-top:1px solid var(--line);background:var(--panel-2);align-items:center;flex-wrap:wrap}
-  .act .hint{font-size:10px;color:var(--ink-faint);flex:1;min-width:200px}
-  .leg-tbl{width:100%;border-collapse:collapse;margin:4px 0 0;font-size:11px}
-  .leg-tbl td{padding:6px 18px;border-top:1px solid var(--line);color:var(--ink-dim)}
-  .leg-tbl td:last-child{text-align:right;color:var(--ink);font-family:var(--disp)}
-  .leg-tbl tr.tot td{color:var(--ink);font-weight:600;border-top:1px solid var(--line)}
-  .empty{text-align:center;padding:60px 20px;color:var(--ink-faint);font-size:12px}
-  .spin{display:inline-block;width:11px;height:11px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:s .7s linear infinite;vertical-align:-1px;margin-right:7px}
+  .warn{padding:13px 20px;font-size:12.5px;line-height:1.6;border-bottom:1px solid var(--line-soft)}
+  .warn.red{background:var(--red-bg);color:#a50e0e}
+  .warn.amber{background:var(--amber-bg);color:#7a4100}
+  .warn b{font-weight:700}
+  .grid{display:grid;grid-template-columns:1fr 1fr}
+  .reso{padding:18px 20px}
+  .reso:first-child{border-right:1px solid var(--line-soft)}
+  .reso h4{font-family:var(--sans);font-size:12px;font-weight:700;color:var(--blue);margin-bottom:7px}
+  .reso .src{font-size:11px;color:var(--ink-3);margin-bottom:10px}
+  .reso p{font-size:12.5px;color:var(--ink-2);white-space:pre-wrap;max-height:240px;overflow:auto;padding-right:6px}
+  .reso p::-webkit-scrollbar{width:8px}.reso p::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+  .ledger{width:100%;border-collapse:collapse;font-size:13px}
+  .ledger td{padding:9px 20px;border-top:1px solid var(--line-soft);color:var(--ink-2)}
+  .ledger td:last-child{text-align:right;font-family:var(--mono);color:var(--ink)}
+  .ledger tr.tot td{font-weight:700;color:var(--ink)}
+  .act{display:flex;gap:12px;padding:16px 20px;border-top:1px solid var(--line-soft);background:#fafafa;align-items:center;flex-wrap:wrap}
+  .act .h{font-size:12px;color:var(--ink-3);flex:1;min-width:220px;line-height:1.5}
+  .empty{text-align:center;padding:56px 20px;color:var(--ink-3);font-size:14px;background:var(--surface);border:1px dashed var(--line);border-radius:12px}
+  .spin{display:inline-block;width:13px;height:13px;border:2px solid var(--line);border-top-color:var(--blue);border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px;margin-right:7px}
   @keyframes s{to{transform:rotate(360deg)}}
-  a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
-  .foot{margin-top:50px;border-top:1px solid var(--line);padding-top:16px;font-size:10px;color:var(--ink-faint);line-height:1.7}
-  code{background:var(--panel-2);padding:1px 5px;border-radius:3px;font-size:11px;color:var(--accent)}
-  @media(max-width:680px){.reso-grid{grid-template-columns:1fr}.reso:first-child{border-right:none;border-bottom:1px solid var(--line)}}
+  a{color:var(--blue);text-decoration:none} a:hover{text-decoration:underline}
+  .foot{margin-top:46px;border-top:1px solid var(--line);padding-top:20px;font-size:12px;color:var(--ink-3);line-height:1.7}
+  @media(max-width:680px){.grid{grid-template-columns:1fr}.reso:first-child{border-right:none;border-bottom:1px solid var(--line-soft)}.q{font-size:15px}}
 </style>
 </head>
 <body>
+<header>
+  <div class="hd">
+    <div class="brand">
+      <div class="logo">S</div>
+      <div>
+        <h1>Scope Desk</h1>
+        <div class="sub">Cross-venue arbitrage scanner · Polymarket × Kalshi</div>
+      </div>
+    </div>
+    <button id="refresh" class="primary" onclick="scan()">Refresh scan</button>
+  </div>
+</header>
+
 <div class="wrap">
-  <header>
-    <div>
-      <h1>SCOPE<span class="tag">·</span>DESK</h1>
-      <div class="sub">Cross-venue prediction-market scanner. Surfaces price gaps between Polymarket and Kalshi, then forces a resolution-equivalence check before anything counts as a real edge. A gap is not an arb until the rulebooks agree.</div>
-    </div>
-    <div class="ctrl">
-      <button id="refresh" class="primary" onclick="scan()">Refresh scan</button>
-    </div>
-  </header>
+  <div class="intro">Surfaces price gaps between matched sports markets, then makes you read both rulebooks before a gap counts as a real edge. A price difference is not arbitrage until the resolutions agree — the lesson of the iPhone 18 case.</div>
 
   <div class="cfg">
     <div><label>Stake / side ($)</label><input id="stake" type="number" value="100" oninput="recompute()"></div>
     <div><label>Min net edge (%)</label><input id="minedge" type="number" value="2" step="0.5" oninput="recompute()"></div>
     <div><label>Poly spread cross (¢)</label><input id="pspread" type="number" value="1" step="0.5" oninput="recompute()"></div>
-    <div><label>Kalshi worker URL</label><input id="kurl" type="text" placeholder="https://your-worker.workers.dev" value=""></div>
+    <div><label>Kalshi worker URL</label><input id="kurl" type="text" placeholder="https://your-worker.workers.dev"></div>
   </div>
 
-  <div class="banner">
-    <b>How to read this:</b> Pairs are matched on title + close date only — that is a weak signal, as the iPhone-18 case showed. Every match opens with both resolution texts side by side. A scope mismatch (different qualifying outcome, settlement source, or sub-event) means the gap is fake. Confirm equivalence once per pair; the choice is saved locally so you never re-check it. Kalshi fee modeled at <code>0.07 · p · (1−p)</code> per contract, rounded up per side.
+  <div class="note">
+    <b>How matching works.</b> Pairs are matched on title and close date only — a weak signal. Each opens with both resolution texts side by side. A scope mismatch (different qualifying outcome, settlement source, OT/postponement handling) makes the gap fake. Confirm equivalence once per pair; it is saved in your browser. Kalshi fee modeled at <code>0.07 · p · (1−p)</code> per contract, rounded up per side.
   </div>
 
   <div class="meta">
-    <span>Status: <b id="st">idle</b></span>
-    <span>Poly markets: <b id="m1">—</b></span>
-    <span>Kalshi markets: <b id="m2">—</b></span>
-    <span>Candidate pairs: <b id="m3">—</b></span>
-    <span>Last scan: <b id="m4">never</b></span>
+    <div class="chip">Status: <b id="st">idle</b></div>
+    <div class="chip">Poly: <b id="m1">—</b></div>
+    <div class="chip">Kalshi: <b id="m2">—</b></div>
+    <div class="chip">Pairs: <b id="m3">—</b></div>
+    <div class="chip">Last scan: <b id="m4">never</b></div>
   </div>
 
-  <div class="sec-title">Confirmed equivalent — net edge above threshold</div>
+  <div class="sec"><span class="dot g"></span>Confirmed equivalent · net edge above threshold</div>
   <div id="confirmed"><div class="empty">No confirmed pairs clearing the threshold yet.</div></div>
 
-  <div class="sec-title">Candidates — resolution unverified, inspect before trusting</div>
+  <div class="sec"><span class="dot a"></span>Candidates · resolution unverified — inspect before trusting</div>
   <div id="candidates"><div class="empty">Run a scan to populate candidates.</div></div>
 
   <div class="foot">
-    SCOPE·DESK is a research aid, not trading advice. It detects <i>price differences</i>; it does not and cannot guarantee two markets resolve identically — that judgment is yours, which is why confirmation is manual. Prediction markets are largely efficient; genuine cross-venue arbitrage net of fees, spread, settlement timing and capital lockup is rare and often illusory. Kalshi trading requires US residency and KYC. The international Polymarket entity is not CFTC-regulated and US access may be restricted. Verify both rulebooks on the source sites before committing capital. Resolution-confirmation state is stored in your browser only (localStorage).
+    Scope Desk is a research aid, not trading advice. It detects price differences; it cannot guarantee two markets resolve identically — that judgment is yours, which is why confirmation is manual. Prediction markets are largely efficient; genuine cross-venue arbitrage net of fees, spread, settlement timing and capital lockup is rare and often illusory. Kalshi trading requires US residency and KYC. The international Polymarket entity is not CFTC-regulated and US access may be restricted. Verify both rulebooks on the source sites before committing capital. Confirmation state is stored in your browser only.
   </div>
 </div>
 
@@ -127,27 +149,22 @@ const approved=JSON.parse(localStorage.getItem('scopedesk_approved')||'{}');
 const norm=s=>(s||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\b(the|a|an|will|to|in|of|by|on|vs|v|game|match)\b/g,' ').replace(/\s+/g,' ').trim();
 function sim(a,b){const A=new Set(norm(a).split(' ').filter(Boolean)),B=new Set(norm(b).split(' ').filter(Boolean));if(!A.size||!B.size)return 0;let i=0;A.forEach(x=>{if(B.has(x))i++});return i/(A.size+B.size-i);}
 const ceil2=x=>Math.ceil(x*100)/100;
-function kfee(p){return ceil2(0.07*p*(1-p));} // Kalshi per-contract fee model, rounded up to the cent
-
+function kfee(p){return ceil2(0.07*p*(1-p));}
 async function getJSON(u){const r=await fetch(u);if(!r.ok)throw new Error(r.status+' '+u);return r.json();}
 
 async function loadPoly(){
-  // Gamma API: open, sports-tagged, with order book prices. Public + CORS-open.
   const out=[];
-  for(const tag of ['sports']){
-    try{
-      const d=await getJSON(`https://gamma-api.polymarket.com/markets?closed=false&limit=120&order=volume&ascending=false&tag=${tag}`);
-      for(const m of (Array.isArray(d)?d:[])){
-        let yes=null,no=null;
-        try{const op=JSON.parse(m.outcomePrices||'[]');if(op.length>=2){yes=parseFloat(op[0]);no=parseFloat(op[1]);}}catch(e){}
-        if(yes==null)continue;
-        out.push({venue:'Polymarket',id:m.id||m.conditionId,q:m.question||m.title||'',
-          yes,no,end:m.endDate||m.end_date_iso||'',
-          reso:(m.description||'No resolution text returned by API. Open on Polymarket to read full rules.').trim(),
-          url:`https://polymarket.com/event/${m.slug||''}`});
-      }
-    }catch(e){console.warn('poly',e);}
-  }
+  try{
+    const d=await getJSON(`https://gamma-api.polymarket.com/markets?closed=false&limit=120&order=volume&ascending=false&tag=sports`);
+    for(const m of (Array.isArray(d)?d:[])){
+      let yes=null,no=null;
+      try{const op=JSON.parse(m.outcomePrices||'[]');if(op.length>=2){yes=parseFloat(op[0]);no=parseFloat(op[1]);}}catch(e){}
+      if(yes==null)continue;
+      out.push({venue:'Polymarket',id:m.id||m.conditionId,q:m.question||m.title||'',yes,no,end:m.endDate||m.end_date_iso||'',
+        reso:(m.description||'No resolution text returned by API. Open on Polymarket to read full rules.').trim(),
+        url:`https://polymarket.com/event/${m.slug||''}`});
+    }
+  }catch(e){console.warn('poly',e);}
   return out;
 }
 async function loadKalshi(base){
@@ -155,125 +172,89 @@ async function loadKalshi(base){
   base=base.replace(/\/+$/,'');
   const out=[];
   try{
-    // Worker proxies https://api.elections.kalshi.com/trade-api/v2/...
     const d=await getJSON(`${base}/trade-api/v2/markets?status=open&limit=200`);
     for(const m of (d.markets||[])){
       const t=(m.title+' '+(m.subtitle||'')).toLowerCase();
       if(!SPORTS_TAGS.some(s=>t.includes(s)) && (m.category||'').toLowerCase()!=='sports')continue;
       out.push({venue:'Kalshi',id:m.ticker,q:(m.title||'')+(m.subtitle?(' — '+m.subtitle):''),
         yes:m.yes_ask!=null?m.yes_ask/100:(m.last_price!=null?m.last_price/100:null),
-        no:m.no_ask!=null?m.no_ask/100:null,
-        end:m.close_time||'',
+        no:m.no_ask!=null?m.no_ask/100:null,end:m.close_time||'',
         reso:(m.rules_primary||m.rules_secondary||'No rules text in API payload. Open on Kalshi to read full rulebook including any scope clause.').trim(),
         url:`https://kalshi.com/markets/${(m.event_ticker||'').toLowerCase()}`});
     }
   }catch(e){
-    document.getElementById('st').innerHTML='<span style="color:var(--danger)">Kalshi fetch failed — check worker URL / deploy. '+e.message+'</span>';
+    document.getElementById('st').innerHTML='<span style="color:var(--red)">Kalshi fetch failed — check worker URL. '+e.message+'</span>';
   }
   return out;
 }
-
 function daysApart(a,b){if(!a||!b)return 99;const x=new Date(a),y=new Date(b);if(isNaN(x)||isNaN(y))return 99;return Math.abs(x-y)/864e5;}
-
 function buildPairs(){
   PAIRS=[];
   for(const p of POLY){
     let best=null,bs=0;
-    for(const k of KAL){
-      const s=sim(p.q,k.q);
-      if(s>bs && s>=0.34 && daysApart(p.end,k.end)<=4){bs=s;best=k;}
-    }
-    if(best){
-      const key=p.id+'::'+best.id;
-      PAIRS.push({p,k:best,sim:bs,key,confirmed:!!approved[key]});
-    }
+    for(const k of KAL){const s=sim(p.q,k.q);if(s>bs && s>=0.34 && daysApart(p.end,k.end)<=4){bs=s;best=k;}}
+    if(best){const key=p.id+'::'+best.id;PAIRS.push({p,k:best,sim:bs,key,confirmed:!!approved[key]});}
   }
 }
-
 function legs(p,k,stake){
-  // Direction: buy the cheaper YES, buy the other side's NO (complementary hedge).
-  // Simplified single-model: cost = pYES + kNO (or kYES + pNO), payout $1.
-  const A=p.yes+k.no, B=k.yes+p.no;
-  const useA=A<=B;
-  const yV=useA?p:k, nV=useA?k:p;
-  const yPx=yV.yes, nPx=nV.no;
+  const A=p.yes+k.no, B=k.yes+p.no, useA=A<=B;
+  const yV=useA?p:k, nV=useA?k:p, yPx=yV.yes, nPx=nV.no;
   const psp=parseFloat(document.getElementById('pspread').value||0)/100;
-  const yPxAdj=yPx+(yV.venue==='Polymarket'?psp:0);
-  const nPxAdj=nPx+(nV.venue==='Polymarket'?psp:0);
-  const contracts=Math.floor(stake/Math.max(yPxAdj,0.01));
-  const cost=contracts*(yPxAdj+nPxAdj);
-  const fee=(yV.venue==='Kalshi'?kfee(yPx)*contracts:0)+(nV.venue==='Kalshi'?kfee(nPx)*contracts:0);
-  const payout=contracts*1.0;
-  const net=payout-cost-fee;
-  const edgePct=cost>0?(net/cost)*100:0;
-  return {yV,nV,yPxAdj,nPxAdj,contracts,cost,fee,payout,net,edgePct};
+  const yA=yPx+(yV.venue==='Polymarket'?psp:0), nA=nPx+(nV.venue==='Polymarket'?psp:0);
+  const c=Math.floor(stake/Math.max(yA,0.01));
+  const cost=c*(yA+nA);
+  const fee=(yV.venue==='Kalshi'?kfee(yPx)*c:0)+(nV.venue==='Kalshi'?kfee(nPx)*c:0);
+  const net=c-cost-fee, edgePct=cost>0?(net/cost)*100:0;
+  return {yV,nV,yA,nA,c,cost,fee,payout:c,net,edgePct};
 }
-
+const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmtd=d=>{if(!d)return '—';const x=new Date(d);return isNaN(x)?d:x.toISOString().slice(0,10);};
 function row(pr){
-  const {p,k,confirmed,key}=pr;
-  const stake=parseFloat(document.getElementById('stake').value||100);
-  const L=legs(p,k,stake);
-  const min=parseFloat(document.getElementById('minedge').value||0);
-  const pass=L.edgePct>=min;
-  const lowSim=pr.sim<0.55;
-  return `<div class="card ${confirmed?'confirmed':''}" id="c_${btoa(key).replace(/=/g,'')}">
-    <div class="card-top" onclick="this.parentNode.classList.toggle('open')">
+  const {p,k,confirmed,key}=pr, stake=parseFloat(document.getElementById('stake').value||100);
+  const L=legs(p,k,stake), min=parseFloat(document.getElementById('minedge').value||0);
+  const pass=L.edgePct>=min, lowSim=pr.sim<0.55;
+  return `<div class="card ${confirmed?'confirmed':''}">
+    <div class="top" onclick="this.parentNode.classList.toggle('open')">
       <div style="flex:1">
         <div class="q">${esc(p.q)}</div>
-        <div class="venues">
-          <span><span class="vn">Poly YES</span><br><span class="px">${(p.yes*100).toFixed(0)}¢</span></span>
-          <span><span class="vn">Kalshi YES</span><br><span class="px">${k.yes!=null?(k.yes*100).toFixed(0)+'¢':'—'}</span></span>
-          <span><span class="vn">Title match</span><br><span class="px">${(pr.sim*100).toFixed(0)}%</span></span>
-          <span><span class="vn">Close gap</span><br><span class="px">${daysApart(p.end,k.end).toFixed(0)}d</span></span>
+        <div class="vrow">
+          <div class="v"><div class="vl">Poly YES</div><div class="vp">${(p.yes*100).toFixed(0)}¢</div></div>
+          <div class="v"><div class="vl">Kalshi YES</div><div class="vp">${k.yes!=null?(k.yes*100).toFixed(0)+'¢':'—'}</div></div>
+          <div class="v"><div class="vl">Title match</div><div class="vp">${(pr.sim*100).toFixed(0)}%</div></div>
+          <div class="v"><div class="vl">Close gap</div><div class="vp">${daysApart(p.end,k.end).toFixed(0)}d</div></div>
         </div>
-        <span class="pill ${confirmed?'ok':'cand'}">${confirmed?'✓ resolution confirmed equivalent':'⚠ resolution UNVERIFIED'}</span>
+        <span class="badge ${confirmed?'ok':'cand'}">${confirmed?'✓ resolution confirmed equivalent':'⚠ resolution unverified'}</span>
       </div>
-      <div class="edge-box">
-        <div class="edge-n ${pass&&confirmed?'pos':'neg'}">${L.edgePct>=0?'+':''}${L.edgePct.toFixed(1)}%</div>
-        <div class="edge-l">net edge · $${stake}/side</div>
+      <div class="edge">
+        <div class="n ${pass&&confirmed?'pos':'neg'}">${L.edgePct>=0?'+':''}${L.edgePct.toFixed(1)}%</div>
+        <div class="l">net · $${stake}/side</div>
       </div>
     </div>
     <div class="body">
-      ${lowSim?`<div class="scope-warn"><b>Weak title match (${(pr.sim*100).toFixed(0)}%).</b> High chance these are different events entirely. Read both texts carefully.</div>`:''}
-      <div class="scope-warn"><b>Before trusting the edge:</b> confirm both markets resolve on the <i>same</i> qualifying outcome, the <i>same</i> settlement source, and handle edge cases (postponement, OT/shootout, void/no-contest) identically. A buried scope clause on either side makes this gap fake — exactly the iPhone-18 trap.</div>
-      <div class="reso-grid">
-        <div class="reso">
-          <h4>Polymarket — resolution</h4>
-          <div class="src">${esc(p.q)} · close ${fmtd(p.end)} · <a href="${p.url}" target="_blank" rel="noopener">open ↗</a></div>
-          <p>${esc(p.reso)}</p>
-        </div>
-        <div class="reso">
-          <h4>Kalshi — resolution</h4>
-          <div class="src">${esc(k.q)} · close ${fmtd(k.end)} · <a href="${k.url}" target="_blank" rel="noopener">open ↗</a></div>
-          <p>${esc(k.reso)}</p>
-        </div>
+      ${lowSim?`<div class="warn red"><b>Weak title match (${(pr.sim*100).toFixed(0)}%).</b> Likely different events. Read both texts carefully.</div>`:''}
+      <div class="warn amber"><b>Before trusting this edge:</b> confirm both resolve on the same qualifying outcome, the same settlement source, and handle postponement, overtime/shootout and void/no-contest identically. A buried scope clause on either side makes this gap fake — the iPhone 18 trap.</div>
+      <div class="grid">
+        <div class="reso"><h4>Polymarket — resolution</h4><div class="src">${esc(p.q)} · close ${fmtd(p.end)} · <a href="${p.url}" target="_blank" rel="noopener">open ↗</a></div><p>${esc(p.reso)}</p></div>
+        <div class="reso"><h4>Kalshi — resolution</h4><div class="src">${esc(k.q)} · close ${fmtd(k.end)} · <a href="${k.url}" target="_blank" rel="noopener">open ↗</a></div><p>${esc(k.reso)}</p></div>
       </div>
-      <table class="leg-tbl">
-        <tr><td>Buy YES — ${L.yV.venue} @ ${(L.yPxAdj*100).toFixed(1)}¢ × ${L.contracts}</td><td>$${(L.yPxAdj*L.contracts).toFixed(2)}</td></tr>
-        <tr><td>Buy NO — ${L.nV.venue} @ ${(L.nPxAdj*100).toFixed(1)}¢ × ${L.contracts}</td><td>$${(L.nPxAdj*L.contracts).toFixed(2)}</td></tr>
+      <table class="ledger">
+        <tr><td>Buy YES — ${L.yV.venue} @ ${(L.yA*100).toFixed(1)}¢ × ${L.c}</td><td>$${(L.yA*L.c).toFixed(2)}</td></tr>
+        <tr><td>Buy NO — ${L.nV.venue} @ ${(L.nA*100).toFixed(1)}¢ × ${L.c}</td><td>$${(L.nA*L.c).toFixed(2)}</td></tr>
         <tr><td>Kalshi fees (modeled)</td><td>$${L.fee.toFixed(2)}</td></tr>
         <tr><td>Payout if resolutions truly match</td><td>$${L.payout.toFixed(2)}</td></tr>
-        <tr class="tot"><td>Net ${L.net>=0?'profit':'loss'}</td><td style="color:${L.net>=0?'var(--gain)':'var(--danger)'}">$${L.net.toFixed(2)} (${L.edgePct.toFixed(1)}%)</td></tr>
+        <tr class="tot"><td>Net ${L.net>=0?'profit':'loss'}</td><td style="color:${L.net>=0?'var(--green)':'var(--red)'}">$${L.net.toFixed(2)} (${L.edgePct.toFixed(1)}%)</td></tr>
       </table>
       <div class="act">
-        <span class="hint">${confirmed?'You confirmed these resolve equivalently. Re-open the rulebooks if either market was re-described.':'One click promotes this to the confirmed list and saves it locally. Only do this after reading BOTH texts above.'}</span>
-        ${confirmed
-          ?`<button onclick="unconfirm('${key}')">Revoke confirmation</button>`
-          :`<button class="primary" onclick="confirmPair('${key}')">Confirm resolutions equivalent</button>`}
+        <span class="h">${confirmed?'You confirmed these resolve equivalently. Re-open the rulebooks if either market was re-described.':'One click promotes this to confirmed and saves it locally. Only after reading BOTH texts above.'}</span>
+        ${confirmed?`<button class="text" onclick="unconfirm('${key}')">Revoke</button>`:`<button class="primary" onclick="confirmPair('${key}')">Confirm equivalent</button>`}
       </div>
     </div>
   </div>`;
 }
-const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const fmtd=d=>{if(!d)return '—';const x=new Date(d);return isNaN(x)?d:x.toISOString().slice(0,10);};
-
 function render(){
-  const min=parseFloat(document.getElementById('minedge').value||0);
-  const stake=parseFloat(document.getElementById('stake').value||100);
-  const conf=PAIRS.filter(x=>x.confirmed && legs(x.p,x.k,stake).edgePct>=min)
-                   .sort((a,b)=>legs(b.p,b.k,stake).edgePct-legs(a.p,a.k,stake).edgePct);
-  const cand=PAIRS.filter(x=>!x.confirmed || legs(x.p,x.k,stake).edgePct<min)
-                   .sort((a,b)=>legs(b.p,b.k,stake).edgePct-legs(a.p,a.k,stake).edgePct);
+  const min=parseFloat(document.getElementById('minedge').value||0), stake=parseFloat(document.getElementById('stake').value||100);
+  const conf=PAIRS.filter(x=>x.confirmed&&legs(x.p,x.k,stake).edgePct>=min).sort((a,b)=>legs(b.p,b.k,stake).edgePct-legs(a.p,a.k,stake).edgePct);
+  const cand=PAIRS.filter(x=>!x.confirmed||legs(x.p,x.k,stake).edgePct<min).sort((a,b)=>legs(b.p,b.k,stake).edgePct-legs(a.p,a.k,stake).edgePct);
   document.getElementById('confirmed').innerHTML=conf.length?conf.map(row).join(''):'<div class="empty">No confirmed pairs clearing the threshold yet. Confirm a candidate below after reading its rulebooks.</div>';
   document.getElementById('candidates').innerHTML=cand.length?cand.map(row).join(''):'<div class="empty">No candidate pairs found this scan.</div>';
   document.getElementById('m3').textContent=PAIRS.length;
@@ -281,22 +262,17 @@ function render(){
 function recompute(){if(PAIRS.length)render();}
 window.confirmPair=k=>{approved[k]=Date.now();localStorage.setItem('scopedesk_approved',JSON.stringify(approved));PAIRS.forEach(p=>{if(p.key===k)p.confirmed=true});render();};
 window.unconfirm=k=>{delete approved[k];localStorage.setItem('scopedesk_approved',JSON.stringify(approved));PAIRS.forEach(p=>{if(p.key===k)p.confirmed=false});render();};
-
 async function scan(){
   const btn=document.getElementById('refresh');btn.disabled=true;
   document.getElementById('st').innerHTML='<span class="spin"></span>scanning';
   try{
-    POLY=await loadPoly();
-    document.getElementById('m1').textContent=POLY.length;
+    POLY=await loadPoly();document.getElementById('m1').textContent=POLY.length;
     KAL=await loadKalshi(document.getElementById('kurl').value.trim());
     document.getElementById('m2').textContent=KAL.length||'0 (set worker URL)';
-    buildPairs();
-    render();
-    document.getElementById('st').textContent=KAL.length?'done':'Poly only — add Kalshi worker URL for cross-venue';
+    buildPairs();render();
+    document.getElementById('st').textContent=KAL.length?'done':'Poly only — add Kalshi worker URL';
     document.getElementById('m4').textContent=new Date().toLocaleTimeString();
-  }catch(e){
-    document.getElementById('st').innerHTML='<span style="color:var(--danger)">error: '+esc(e.message)+'</span>';
-  }
+  }catch(e){document.getElementById('st').innerHTML='<span style="color:var(--red)">error: '+esc(e.message)+'</span>';}
   btn.disabled=false;
 }
 </script>
