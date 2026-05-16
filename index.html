@@ -142,7 +142,8 @@
 </div>
 
 <script>
-const SPORTS_TAGS=['sports','nfl','nba','mlb','nhl','soccer','epl','ufc','mma','tennis','golf','ncaa','boxing','f1'];
+// Single-game Kalshi sports series. Parlay/combo markets (KXMVE...) are deliberately excluded.
+const KALSHI_SERIES=['KXNBAGAME','KXNHLGAME','KXMLBGAME','KXNFLGAME','KXUFCFIGHT','KXEPLGAME','KXSOCCERGAME','KXATPMATCH','KXWTAMATCH'];
 let POLY=[], KAL=[], PAIRS=[];
 const approved=JSON.parse(localStorage.getItem('scopedesk_approved')||'{}');
 
@@ -167,23 +168,34 @@ async function loadPoly(){
   }catch(e){console.warn('poly',e);}
   return out;
 }
+// Kalshi prices come as STRING dollar fields ("0.5600"), not integer cents. Parse defensively.
+function kpx(v){if(v==null)return null;const n=parseFloat(v);return isNaN(n)?null:n;}
 async function loadKalshi(base){
   if(!base)return [];
   base=base.replace(/\/+$/,'');
-  const out=[];
-  try{
-    const d=await getJSON(`${base}/trade-api/v2/markets?status=open&limit=200`);
-    for(const m of (d.markets||[])){
-      const t=(m.title+' '+(m.subtitle||'')).toLowerCase();
-      if(!SPORTS_TAGS.some(s=>t.includes(s)) && (m.category||'').toLowerCase()!=='sports')continue;
-      out.push({venue:'Kalshi',id:m.ticker,q:(m.title||'')+(m.subtitle?(' — '+m.subtitle):''),
-        yes:m.yes_ask!=null?m.yes_ask/100:(m.last_price!=null?m.last_price/100:null),
-        no:m.no_ask!=null?m.no_ask/100:null,end:m.close_time||'',
-        reso:(m.rules_primary||m.rules_secondary||'No rules text in API payload. Open on Kalshi to read full rulebook including any scope clause.').trim(),
-        url:`https://kalshi.com/markets/${(m.event_ticker||'').toLowerCase()}`});
-    }
-  }catch(e){
-    document.getElementById('st').innerHTML='<span style="color:var(--red)">Kalshi fetch failed — check worker URL. '+e.message+'</span>';
+  const out=[];let anyOk=false;
+  for(const series of KALSHI_SERIES){
+    try{
+      const d=await getJSON(`${base}/trade-api/v2/markets?series_ticker=${series}&status=open&limit=200`);
+      anyOk=true;
+      for(const m of (d.markets||[])){
+        // Skip multivariate parlay combos — they have no Polymarket equivalent.
+        if((m.event_ticker||'').startsWith('KXMVE'))continue;
+        if((m.ticker||'').startsWith('KXMVE'))continue;
+        const yes=kpx(m.yes_ask_dollars)??kpx(m.last_price_dollars)??kpx(m.yes_bid_dollars);
+        const no =kpx(m.no_ask_dollars)??(yes!=null?+(1-yes).toFixed(4):null);
+        if(yes==null)continue;
+        const sub=m.yes_sub_title||m.subtitle||'';
+        out.push({venue:'Kalshi',id:m.ticker,
+          q:(m.title||'')+(sub?(' — '+sub):''),
+          yes,no,end:m.close_time||m.expiration_time||'',
+          reso:(m.rules_primary||m.rules_secondary||'No rules text in API payload — open on Kalshi to read the full rulebook, including any scope clause that could make this gap fake.').trim(),
+          url:`https://kalshi.com/markets/${(m.event_ticker||'').toLowerCase()}`});
+      }
+    }catch(e){console.warn('kalshi '+series,e.message);}
+  }
+  if(!anyOk){
+    document.getElementById('st').innerHTML='<span style="color:var(--red)">Kalshi fetch failed — verify worker URL has no trailing path and the worker is deployed.</span>';
   }
   return out;
 }
