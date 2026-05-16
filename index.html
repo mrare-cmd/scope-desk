@@ -127,6 +127,7 @@
     <div class="chip">Poly: <b id="m1">—</b></div>
     <div class="chip">Kalshi: <b id="m2">—</b></div>
     <div class="chip">Pairs: <b id="m3">—</b></div>
+    <div class="chip">Near-miss: <b id="m5">—</b></div>
     <div class="chip">Last scan: <b id="m4">never</b></div>
   </div>
 
@@ -135,6 +136,9 @@
 
   <div class="sec"><span class="dot a"></span>Candidates · resolution unverified — inspect before trusting</div>
   <div id="candidates"><div class="empty">Run a scan to populate candidates.</div></div>
+
+  <div class="sec"><span class="dot" style="background:var(--ink-3)"></span>Near-misses · same-day partial matches — diagnostic only, not tradable</div>
+  <div id="nearmiss"><div class="empty">Run a scan. This section shows same-date games where only one team or the date lined up, so an empty result above is explainable rather than mysterious.</div></div>
 
   <div class="foot">
     Scope Desk is a research aid, not trading advice. It detects price differences; it cannot guarantee two markets resolve identically — that judgment is yours, which is why confirmation is manual. Prediction markets are largely efficient; genuine cross-venue arbitrage net of fees, spread, settlement timing and capital lockup is rare and often illusory. Kalshi trading requires US residency and KYC. The international Polymarket entity is not CFTC-regulated and US access may be restricted. Verify both rulebooks on the source sites before committing capital. Confirmation state is stored in your browser only.
@@ -147,8 +151,77 @@ const KALSHI_SERIES=['KXNBAGAME','KXNHLGAME','KXMLBGAME','KXNFLGAME','KXUFCFIGHT
 let POLY=[], KAL=[], PAIRS=[];
 const approved=JSON.parse(localStorage.getItem('scopedesk_approved')||'{}');
 
-const norm=s=>(s||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\b(the|a|an|will|to|in|of|by|on|vs|v|game|match)\b/g,' ').replace(/\s+/g,' ').trim();
-function sim(a,b){const A=new Set(norm(a).split(' ').filter(Boolean)),B=new Set(norm(b).split(' ').filter(Boolean));if(!A.size||!B.size)return 0;let i=0;A.forEach(x=>{if(B.has(x))i++});return i/(A.size+B.size-i);}
+// ---- Game-identity matching ----------------------------------------------
+// Titles differ wildly across venues ("Los Angeles D vs San Diego Winner?" vs
+// "Will the Dodgers beat the Padres?"). Text similarity fails on this. Instead
+// we identify the underlying GAME: same calendar date + same two teams.
+// Team strings are normalized to a canonical token via an alias map.
+const TEAM_ALIASES={
+  // MLB
+  'dodgers':'LAD','los angeles d':'LAD','la dodgers':'LAD','lad':'LAD',
+  'padres':'SD','san diego':'SD','sd':'SD',
+  'yankees':'NYY','ny yankees':'NYY','nyy':'NYY',
+  'mets':'NYM','ny mets':'NYM','nym':'NYM',
+  'red sox':'BOS','boston':'BOS',
+  'white sox':'CWS','chicago ws':'CWS','chi white sox':'CWS',
+  'cubs':'CHC','chicago c':'CHC','chi cubs':'CHC',
+  'angels':'LAA','los angeles a':'LAA','la angels':'LAA',
+  'athletics':'ATH','a s':'ATH','oakland':'ATH','as':'ATH',
+  'mariners':'SEA','seattle':'SEA',
+  'blue jays':'TOR','toronto':'TOR',
+  'tigers':'DET','detroit':'DET',
+  'rays':'TB','tampa bay':'TB',
+  'orioles':'BAL','baltimore':'BAL',
+  'nationals':'WSH','washington n':'WSH',
+  'phillies':'PHI','philadelphia':'PHI',
+  'pirates':'PIT','pittsburgh':'PIT',
+  'reds':'CIN','cincinnati':'CIN',
+  'guardians':'CLE','cleveland':'CLE',
+  'brewers':'MIL','milwaukee':'MIL',
+  'twins':'MIN','minnesota t':'MIN',
+  'rockies':'COL','colorado r':'COL',
+  'diamondbacks':'AZ','arizona':'AZ','dbacks':'AZ',
+  'rangers':'TEX','texas r':'TEX',
+  'astros':'HOU','houston':'HOU',
+  'braves':'ATL','atlanta b':'ATL',
+  'marlins':'MIA','miami m':'MIA',
+  'cardinals':'STL','st louis':'STL',
+  'royals':'KC','kansas city':'KC',
+  'giants':'SF','san francisco g':'SF',
+  // NHL (partial; extend as needed)
+  'canadiens':'MTL','montreal':'MTL','mtl canadiens':'MTL',
+  'sabres':'BUF','buffalo':'BUF',
+  // Generic city fallbacks for soccer/other are handled by token overlap below.
+};
+function canonTeam(s){
+  s=(s||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\b(fc|sd|cf|club|the)\b/g,' ').replace(/\s+/g,' ').trim();
+  if(TEAM_ALIASES[s])return TEAM_ALIASES[s];
+  for(const k in TEAM_ALIASES){if(s.includes(k))return TEAM_ALIASES[k];}
+  return s; // unknown team: fall back to its own normalized string
+}
+const dayKey=d=>{if(!d)return '';const x=new Date(d);return isNaN(x)?'':x.toISOString().slice(0,10);};
+// Pull the two team tokens out of a market. Kalshi: yes_sub_title is one team,
+// no_sub_title the other. Poly: groupItemTitle is the team; opponent parsed from
+// the question/slug ("X vs Y", "Will X win", "X-Y").
+function teamsOf(m){
+  if(m.venue==='Kalshi'){
+    return [canonTeam(m._yesTeam),canonTeam(m._noTeam)].filter(Boolean).sort();
+  }
+  // Polymarket
+  let a=m._group||'', b='';
+  const q=(m._q2||m.q||'').toLowerCase();
+  let mt=q.match(/(.+?)\s+vs\.?\s+(.+?)(?:\s+winner|\s+win|\?|$)/);
+  if(mt){a=a||mt[1];b=mt[2];}
+  else{mt=q.match(/will\s+(.+?)\s+win/);if(mt)a=a||mt[1];}
+  // opponent often only in slug; if still missing, leave b empty (near-miss)
+  return [canonTeam(a),canonTeam(b)].filter(Boolean).sort();
+}
+function gameKey(m){
+  const t=teamsOf(m);
+  const dk=dayKey(m.end||m._gameTime);
+  if(!dk||t.length<2)return null; // can't form a full identity
+  return dk+'|'+t.join('|');
+}
 const ceil2=x=>Math.ceil(x*100)/100;
 function kfee(p){return ceil2(0.07*p*(1-p));}
 async function getJSON(u){const r=await fetch(u);if(!r.ok)throw new Error(r.status+' '+u);return r.json();}
@@ -156,12 +229,17 @@ async function getJSON(u){const r=await fetch(u);if(!r.ok)throw new Error(r.stat
 async function loadPoly(){
   const out=[];
   try{
-    const d=await getJSON(`https://gamma-api.polymarket.com/markets?closed=false&limit=120&order=volume&ascending=false&tag=sports`);
+    const d=await getJSON(`https://gamma-api.polymarket.com/markets?closed=false&limit=500&order=volume&ascending=false&tag=sports`);
     for(const m of (Array.isArray(d)?d:[])){
       let yes=null,no=null;
       try{const op=JSON.parse(m.outcomePrices||'[]');if(op.length>=2){yes=parseFloat(op[0]);no=parseFloat(op[1]);}}catch(e){}
       if(yes==null)continue;
-      out.push({venue:'Polymarket',id:m.id||m.conditionId,q:m.question||m.title||'',yes,no,end:m.endDate||m.end_date_iso||'',
+      out.push({venue:'Polymarket',id:m.id||m.conditionId,q:m.question||m.title||'',yes,no,
+        end:m.endDate||m.endDateIso||'',
+        _gameTime:m.gameStartTime||m.endDateIso||'',
+        _group:m.groupItemTitle||'',
+        _q2:m.question||'',
+        _slug:m.slug||'',
         reso:(m.description||'No resolution text returned by API. Open on Polymarket to read full rules.').trim(),
         url:`https://polymarket.com/event/${m.slug||''}`});
     }
@@ -188,8 +266,12 @@ async function loadKalshi(base){
         const sub=m.yes_sub_title||m.subtitle||'';
         out.push({venue:'Kalshi',id:m.ticker,
           q:(m.title||'')+(sub?(' — '+sub):''),
-          yes,no,end:m.close_time||m.expiration_time||'',
-          reso:(m.rules_primary||m.rules_secondary||'No rules text in API payload — open on Kalshi to read the full rulebook, including any scope clause that could make this gap fake.').trim(),
+          yes,no,end:m.close_time||m.occurrence_datetime||m.expiration_time||'',
+          _gameTime:m.occurrence_datetime||m.close_time||'',
+          _yesTeam:m.yes_sub_title||'',
+          _noTeam:m.no_sub_title||'',
+          _event:m.event_ticker||'',
+          reso:((m.rules_primary||'')+(m.rules_secondary?('\n\n'+m.rules_secondary):'')||'No rules text in API payload — open on Kalshi to read the full rulebook, including any scope clause that could make this gap fake.').trim(),
           url:`https://kalshi.com/markets/${(m.event_ticker||'').toLowerCase()}`});
       }
     }catch(e){console.warn('kalshi '+series,e.message);}
@@ -200,12 +282,36 @@ async function loadKalshi(base){
   return out;
 }
 function daysApart(a,b){if(!a||!b)return 99;const x=new Date(a),y=new Date(b);if(isNaN(x)||isNaN(y))return 99;return Math.abs(x-y)/864e5;}
+let NEARMISS=[];
 function buildPairs(){
-  PAIRS=[];
+  PAIRS=[];NEARMISS=[];
+  // Index Kalshi by full game key and by partial (date + one team) for near-miss.
+  const kByGame=new Map(), kByDayTeam=new Map();
+  for(const k of KAL){
+    const gk=gameKey(k);
+    if(gk){(kByGame.get(gk)||kByGame.set(gk,[]).get(gk)).push(k);}
+    const dk=dayKey(k.end||k._gameTime);
+    for(const t of teamsOf(k)){if(dk&&t){const kk=dk+'|'+t;(kByDayTeam.get(kk)||kByDayTeam.set(kk,[]).get(kk)).push(k);}}
+  }
+  const seen=new Set();
   for(const p of POLY){
-    let best=null,bs=0;
-    for(const k of KAL){const s=sim(p.q,k.q);if(s>bs && s>=0.34 && daysApart(p.end,k.end)<=4){bs=s;best=k;}}
-    if(best){const key=p.id+'::'+best.id;PAIRS.push({p,k:best,sim:bs,key,confirmed:!!approved[key]});}
+    const gk=gameKey(p);
+    if(gk && kByGame.has(gk)){
+      for(const k of kByGame.get(gk)){
+        const key=p.id+'::'+k.id;
+        if(seen.has(key))continue;seen.add(key);
+        PAIRS.push({p,k,key,basis:'game identity',confirmed:!!approved[key]});
+      }
+      continue;
+    }
+    // Near-miss: same date + at least one shared team, but full identity didn't form.
+    const dk=dayKey(p.end||p._gameTime);
+    const pts=teamsOf(p);
+    let hit=null;
+    for(const t of pts){const kk=dk+'|'+t;if(dk&&t&&kByDayTeam.has(kk)){hit=kByDayTeam.get(kk)[0];break;}}
+    if(hit){
+      NEARMISS.push({p,k:hit,reason:pts.length<2?'Could not parse both Polymarket teams':'Date + one team matched; second team or date differs'});
+    }
   }
 }
 function legs(p,k,stake){
@@ -224,7 +330,7 @@ const fmtd=d=>{if(!d)return '—';const x=new Date(d);return isNaN(x)?d:x.toISOS
 function row(pr){
   const {p,k,confirmed,key}=pr, stake=parseFloat(document.getElementById('stake').value||100);
   const L=legs(p,k,stake), min=parseFloat(document.getElementById('minedge').value||0);
-  const pass=L.edgePct>=min, lowSim=pr.sim<0.55;
+  const pass=L.edgePct>=min;
   return `<div class="card ${confirmed?'confirmed':''}">
     <div class="top" onclick="this.parentNode.classList.toggle('open')">
       <div style="flex:1">
@@ -232,7 +338,7 @@ function row(pr){
         <div class="vrow">
           <div class="v"><div class="vl">Poly YES</div><div class="vp">${(p.yes*100).toFixed(0)}¢</div></div>
           <div class="v"><div class="vl">Kalshi YES</div><div class="vp">${k.yes!=null?(k.yes*100).toFixed(0)+'¢':'—'}</div></div>
-          <div class="v"><div class="vl">Title match</div><div class="vp">${(pr.sim*100).toFixed(0)}%</div></div>
+          <div class="v"><div class="vl">Match basis</div><div class="vp" style="font-size:12px">${pr.basis||'game'}</div></div>
           <div class="v"><div class="vl">Close gap</div><div class="vp">${daysApart(p.end,k.end).toFixed(0)}d</div></div>
         </div>
         <span class="badge ${confirmed?'ok':'cand'}">${confirmed?'✓ resolution confirmed equivalent':'⚠ resolution unverified'}</span>
@@ -243,8 +349,8 @@ function row(pr){
       </div>
     </div>
     <div class="body">
-      ${lowSim?`<div class="warn red"><b>Weak title match (${(pr.sim*100).toFixed(0)}%).</b> Likely different events. Read both texts carefully.</div>`:''}
-      <div class="warn amber"><b>Before trusting this edge:</b> confirm both resolve on the same qualifying outcome, the same settlement source, and handle postponement, overtime/shootout and void/no-contest identically. A buried scope clause on either side makes this gap fake — the iPhone 18 trap.</div>
+      ${pr.basis==='game identity'?`<div class="warn amber" style="background:var(--blue-bg);color:var(--blue-ink)"><b>Matched on game identity</b> (same date + same two teams), not title text. This is reliable for <i>which game</i>, but says nothing about whether the two markets <i>resolve</i> the same way. Check below.</div>`:''}
+      <div class="warn amber"><b>Before trusting this edge:</b> confirm both resolve on the same qualifying outcome, the same settlement source, and handle postponement, overtime/shootout/extra-time and void/no-contest identically. Soccer markets in particular differ on extra-time and penalties across venues. A buried scope clause makes this gap fake — the iPhone 18 trap.</div>
       <div class="grid">
         <div class="reso"><h4>Polymarket — resolution</h4><div class="src">${esc(p.q)} · close ${fmtd(p.end)} · <a href="${p.url}" target="_blank" rel="noopener">open ↗</a></div><p>${esc(p.reso)}</p></div>
         <div class="reso"><h4>Kalshi — resolution</h4><div class="src">${esc(k.q)} · close ${fmtd(k.end)} · <a href="${k.url}" target="_blank" rel="noopener">open ↗</a></div><p>${esc(k.reso)}</p></div>
@@ -269,7 +375,16 @@ function render(){
   const cand=PAIRS.filter(x=>!x.confirmed||legs(x.p,x.k,stake).edgePct<min).sort((a,b)=>legs(b.p,b.k,stake).edgePct-legs(a.p,a.k,stake).edgePct);
   document.getElementById('confirmed').innerHTML=conf.length?conf.map(row).join(''):'<div class="empty">No confirmed pairs clearing the threshold yet. Confirm a candidate below after reading its rulebooks.</div>';
   document.getElementById('candidates').innerHTML=cand.length?cand.map(row).join(''):'<div class="empty">No candidate pairs found this scan.</div>';
+  const nm=document.getElementById('nearmiss');
+  if(nm){
+    nm.innerHTML=NEARMISS.length?NEARMISS.map(x=>`<div class="card"><div class="top" style="cursor:default"><div style="flex:1">
+      <div class="q" style="font-size:14px">${esc(x.p.q)}</div>
+      <div style="font-size:12px;color:var(--ink-3);margin-top:6px">Poly close ${fmtd(x.p.end)} · nearest Kalshi: ${esc(x.k.q)} (${fmtd(x.k.end)})</div>
+      <span class="badge cand" style="margin-top:10px">${esc(x.reason)}</span>
+    </div></div></div>`).join(''):'<div class="empty">No near-misses. Either matching is clean, or these two venues simply share no same-day games right now.</div>';
+  }
   document.getElementById('m3').textContent=PAIRS.length;
+  const mn=document.getElementById('m5');if(mn)mn.textContent=NEARMISS.length;
 }
 function recompute(){if(PAIRS.length)render();}
 window.confirmPair=k=>{approved[k]=Date.now();localStorage.setItem('scopedesk_approved',JSON.stringify(approved));PAIRS.forEach(p=>{if(p.key===k)p.confirmed=true});render();};
